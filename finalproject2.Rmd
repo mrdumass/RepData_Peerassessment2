@@ -1,17 +1,86 @@
 Analysis of Severe Storms in the United States
 ========================================================
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring web pages (click the **Help** toolbar button for more details on using R Markdown).
-
-When you click the **Knit HTML** button a web page will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Synopsis ##
+Using the data from the Storm Data from NOAA I use the data to determine which types of storms are the most harmful to population health and which types of storms have the greatest economic impact. By Impact I mean impact on the entire United States. I did not look at any particular region in any of the analysis. 
+## Data Processing ##
+The first thing we must do is read the raw data set into R
+```{r}
+rawdata<-read.csv("repdata-data-StormData.csv")
+```
+The first thing that has to be done is to simplify and clean up this raw dataset. Since I am only concerned about the effect on the United States as a whole and the financial other health outcome of the storms. I do not need the columns of the raw data set that deal with more detailed location. I also will retain the BGN_DATE Column to retain the date of the event.
+```{r}
+keep<-c("BGN_DATE","EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")
+keepdata<-rawdata[keep]
+rm<-rawdata
+```
+The in the EVTYPE need to be clean up so they are properly named. For example, Thunderstorms are named many different ways (TSTM WIND, THUNDERSTROM WINDS, THUNDERSTROM WIND). I will correct that amonng others listed here:
 
 ```{r}
-summary(cars)
+keepdata[keepdata$EVTYPE=="TSTM WIND",]$EVTYPE<-"THUNDERSTORM WIND"
+keepdata[keepdata$EVTYPE=="TSTM WIND (G45)",]$EVTYPE<-"THUNDERSTORM WIND"
+keepdata[keepdata$EVTYPE=="THUNDERSTORM WINDS",]$EVTYPE<-"THUNDERSTORM WIND"
+keepdata[keepdata$EVTYPE=="MARINE TSTM WIND",]$EVTYPE<-"MARINE THUNDERSTORM WIND"
+keepdata[keepdata$EVTYPE=="HURRICANE/TYPHOON",]$EVTYPE<-"HURRICANE"
+keepdata[keepdata$EVTYPE=="EXTREME COLD",]$EVTYPE<-"EXTREME COLD/WIND CHILL"
+keepdata[keepdata$EVTYPE=="HEAT WAVE",]$EVTYPE<-"HEAT"
+keepdata[keepdata$EVTYPE=="EXTREME HEAT",]$EVTYPE<-"EXCESSIVE HEAT"
+keepdata[keepdata$EVTYPE=="WILD/FOREST FIRE",]$EVTYPE<-"WILDFIRE"
 ```
 
-You can also embed plots, for example:
+## RESULTS ##
 
-```{r fig.width=7, fig.height=6}
-plot(cars)
+# Population Health
+
+The two measures of effect on population health are death and injuries. Lets look at death first. The total number of deaths listed in this data is:
+```{r}
+sum(keepdata$FATALITIES)
 ```
+To determine the number of deaths for each type of storm we use the aggregate function and rank the events in desending order from highest to lowest.
+```{r}
+deaths<-aggregate(FATALITIES~EVTYPE,data=keepdata,sum)
+rankdeath<-deaths[order(deaths$FATALITIES,decreasing=TRUE),]
+head(rankdeath,n=20)
+```
+Clearly the top causing of event death are tornados and Excessive heat which represent roughly 50% of the event deaths by themselves. I will repeat the same analysis for injuries.
+```{r}
+sum(keepdata$INJURIES)
+```
+Now get the number of injuries for each type of event
+```{r}
+injury<-aggregate(INJURIES~EVTYPE,data=keepdata,sum)
+rankinjury<-injury[order(injury$INJURIES,decreasing=TRUE),]
+head(rankinjury,n=20)
+```
+Tornados are the dominate cause of injuries causing over 64% of all injuries. No other event causes more than 6.8% of total injuries.
 
+I will plot this same data in a graph  for both deaths and injuries which really show how significant the top events are in death and how massive tornados are in terms of causing injuries
+```{r}
+par(mfrow=c(2,1),mar=c(1,1,1,1))
+barplot(rankdeath[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Death",ylab="Deaths",
+        legend=rankdeath[1:20,1])
+barplot(rankinjury[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Injuries",ylab="Injuries",
+        legend=rankinjury[1:20,1])
+```
+# Event Economic Cost #
+Since we are only looking at cost for the ecomonic issue we will use the aggregate function as before but then add the crop and property together to determine the significant ecomonic events
+```{r}
+prop<-aggregate(PROPDMG~EVTYPE,data=keepdata,sum)
+crop<-aggregate(CROPDMG~EVTYPE,data=keepdata,sum)
+prop[,2]<-prop[,2]+crop[,2]
+rankprop<-prop[order(prop$PROPDMG,decreasing=TRUE),]
+```
+The total ecomonic impact of Events is
+```{r}
+sum(rankprop[,2])
+```
+The table of the top 20 ecomonic Events are
+```{r}
+head(rankprop,n=20)
+```
+Flooding does almost twice as much economic damage as the next largest Event
+```{r}
+par(mfram(1,1))
+barplot(rankprop[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Costs",ylab="Dollars",
+        legend=rankprop[1:20,1])
+```
