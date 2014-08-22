@@ -2,19 +2,19 @@ Analysis of Severe Storms in the United States
 ========================================================
 
 ## Synopsis ##
-Using the data from the Storm Data from NOAA I use the data to determine which types of storms are the most harmful to population health and which types of storms have the greatest economic impact. By Impact I mean impact on the entire United States. I did not look at any particular region in any of the analysis. 
+Using the data from the Storm Data from NOAA I use the data to determine which types of storms are the most harmful to population health and which types of storms have the greatest economic impact. By Impact I mean impact on the entire United States. I did not look at any particular region in this analysis. The analysis shows that tornados are the leading cause of death and injury while flooding is the leading ecomonic impact.
 ## Data Processing ##
 The first thing we must do is read the raw data set into R
 ```{r}
 rawdata<-read.csv("repdata-data-StormData.csv")
 ```
-The first thing that has to be done is to simplify and clean up this raw dataset. Since I am only concerned about the effect on the United States as a whole and the financial other health outcome of the storms. I do not need the columns of the raw data set that deal with more detailed location. I also will retain the BGN_DATE Column to retain the date of the event.
+The next thing that has to be done is to simplify and clean up this raw dataset. Since I am only concerned about the effect on the United States as a whole and the financial other health outcome of the storms. I do not need the columns of the raw data set that deal with more detailed location. I also will retain the BGN_DATE Column to retain the date of the event.
 ```{r}
 keep<-c("BGN_DATE","EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")
 keepdata<-rawdata[keep]
 rm<-rawdata
 ```
-The in the EVTYPE need to be clean up so they are properly named. For example, Thunderstorms are named many different ways (TSTM WIND, THUNDERSTROM WINDS, THUNDERSTROM WIND). I will correct that amonng others listed here:
+Then in EVTYPE need to clean up so they are properly named. For example, Thunderstorms are named many different ways (TSTM WIND, THUNDERSTROM WINDS, THUNDERSTROM WIND). I will correct that among others listed here:
 
 ```{r}
 keepdata[keepdata$EVTYPE=="TSTM WIND",]$EVTYPE<-"THUNDERSTORM WIND"
@@ -27,10 +27,21 @@ keepdata[keepdata$EVTYPE=="HEAT WAVE",]$EVTYPE<-"HEAT"
 keepdata[keepdata$EVTYPE=="EXTREME HEAT",]$EVTYPE<-"EXCESSIVE HEAT"
 keepdata[keepdata$EVTYPE=="WILD/FOREST FIRE",]$EVTYPE<-"WILDFIRE"
 ```
-
+I also needed to convert the Crop and Property Damage back into their correct formats
+```{r}
+keepdata[keepdata$PROPDMGEXP=="K",]$PROPDMG<-keepdata[keepdata$PROPDMGEXP=="K",]$PROPDMG*10^3
+keepdata[keepdata$PROPDMGEXP=="m",]$PROPDMG<-keepdata[keepdata$PROPDMGEXP=="m",]$PROPDMG*10^6
+keepdata[keepdata$PROPDMGEXP=="M",]$PROPDMG<-keepdata[keepdata$PROPDMGEXP=="M",]$PROPDMG*10^6
+keepdata[keepdata$PROPDMGEXP=="B",]$PROPDMG<-keepdata[keepdata$PROPDMGEXP=="B",]$PROPDMG*10^9
+keepdata[keepdata$CROPDMGEXP=="k",]$CROPDMG<-keepdata[keepdata$CROPDMGEXP=="k",]$CROPDMG*10^3
+keepdata[keepdata$CROPDMGEXP=="K",]$CROPDMG<-keepdata[keepdata$CROPDMGEXP=="K",]$CROPDMG*10^3
+keepdata[keepdata$CROPDMGEXP=="m",]$CROPDMG<-keepdata[keepdata$CROPDMGEXP=="m",]$CROPDMG*10^6
+keepdata[keepdata$CROPDMGEXP=="M",]$CROPDMG<-keepdata[keepdata$CROPDMGEXP=="M",]$CROPDMG*10^6
+keepdata[keepdata$CROPDMGEXP=="B",]$CROPDMG<-keepdata[keepdata$CROPDMGEXP=="B",]$CROPDMG*10^9
+```
 ## RESULTS ##
 
-# Population Health
+# Population Health #
 
 The two measures of effect on population health are death and injuries. Lets look at death first. The total number of deaths listed in this data is:
 ```{r}
@@ -56,8 +67,7 @@ Tornados are the dominate cause of injuries causing over 64% of all injuries. No
 
 I will plot this same data in a graph  for both deaths and injuries which really show how significant the top events are in death and how massive tornados are in terms of causing injuries
 ```{r}
-par(mfrow=c(2,1),mar=c(1,1,1,1))
-barplot(rankdeath[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Death",ylab="Deaths",
+barplot(rankdeath[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Deaths",ylab="Deaths",
         legend=rankdeath[1:20,1])
 barplot(rankinjury[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Injuries",ylab="Injuries",
         legend=rankinjury[1:20,1])
@@ -80,7 +90,6 @@ head(rankprop,n=20)
 ```
 Flooding does almost twice as much economic damage as the next largest Event
 ```{r}
-par(mfram(1,1))
 barplot(rankprop[1:20,2],col=rainbow(20),main="Top 20 Causes of Weather Event Costs",ylab="Dollars",
         legend=rankprop[1:20,1])
 ```
